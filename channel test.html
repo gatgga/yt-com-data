@@ -1,0 +1,244 @@
+<html>
+<head>
+   <meta charset="utf-8">
+   <link rel="stylesheet" type="text/css" href="/module/include/strm/youtubedataapi_v3_list/style.css">
+   <title>YouTubeAPIv3サンプル | 認証ユーザー自身のチャンネルの再生リスト情報取得（認証あり）</title>
+   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+   <script>
+      /* 開発キー
+         https://code.google.com/apis/console
+      var APIKEY="AIzaSyBWqa3wGl7b8DKxpepR6acqdvgn54_H-DA";
+      */
+      var APIKEY="AIzaSyC3VBRnfUU9_qO1Gr1ARBO8BZLT-Sp6vFc";
+
+      /* クライアントID
+         https://code.google.com/apis/console
+      */
+      var OAUTH2_CLIENT_ID="385065331498-b8gue5e1qivdiu75mtcqlclldhk57f7j.apps.googleusercontent.com";
+
+      var OAUTH2_SCOPES = [
+         'https://www.googleapis.com/auth/yt-analytics.readonly',
+         'https://www.googleapis.com/auth/youtube.readonly'
+      ];
+      /* GoogleAPIロード後に呼び出される */
+      window.onJSClientLoad = function() {
+         dbg("★onJSClientLoad");
+         gapi.auth.init(function() {
+			dbg("★onJSClientLoad 1");
+            window.setTimeout(checkAuth,1);
+         });
+		 dbg("★onJSClientLoad 0");
+      };
+      /* OAuth認証チェック */
+      /* OAuth認証チェック */
+      function checkAuth() {
+         dbg("★checkAuth");
+         gapi.auth.authorize({
+            client_id: OAUTH2_CLIENT_ID,
+            scope: OAUTH2_SCOPES,
+            immediate: false
+         },handleAuthResult);
+      }
+      /* gapi.auth.authorize()の呼び出し結果を処理 */
+      function handleAuthResult(authResult) {
+         dbg("★handleAuthResult");
+         if (authResult) {
+            /* 認証に成功したら認証リンクを隠し、認証したら見れるものを表示 */
+            $('.pre-auth').hide();
+            $('.post-auth').show();
+            /* 処理実行 */
+            loadAPIClientInterfaces();
+         }else{
+            /* 認証に失敗したら認証リンクを表示し、認証しないと見れないものは非表示 */
+            $('.post-auth').hide();
+            $('.pre-auth').show();
+            displayMessage("認証に失敗しました");
+            /* ログインリンクを有効化 */
+            $( '#login-link' ).click(function() {
+               gapi.auth.authorize({
+                  client_id: OAUTH2_CLIENT_ID,
+                  scope: OAUTH2_SCOPES,
+                  immediate: false
+               }, handleAuthResult);
+            });
+         }
+      }
+      /* ページにメッセージを表示する */
+      function displayMessage(message) {
+         $("#message").text(message).show();
+      }
+      /* 上記で表示されたメッセージを隠す */
+      function hideMessage() {
+         $("#message").hide();
+      }
+      /* APIロード */
+      function loadAPIClientInterfaces() {
+         dbg("★loadAPIClientInterfaces");
+         gapi.client.setApiKey(APIKEY);
+         gapi.client.load('youtube', 'v3', function(){
+            $.getYouTubeResults({
+               "maxResults":10,
+               "channelId":CHANNEL_ID /* チャンネルID指定 */
+            });
+         });
+      }
+      (function($){
+         $.getYouTubeResults=function(options){
+            dbg("★getYouTubeResults");
+            var opt=$.extend({
+               "type":"video",
+               "maxResults":5,      /* 1ページ当たりの結果数最大値 */
+               "limit":0,
+               "channelId":"",
+               "part":"id, snippet, status",
+               "fields":""
+            },options);
+
+            var pageToken="", s="";
+            var allcnt=0, j=0, totalResults=0, resultsPerPage=0, total=0;
+
+            var requestOptions = {
+               /*  1ページ当たりの結果数最大値(0-50) デフォルト10 */
+               "maxResults":opt.maxResults,
+               /* 固有チャンネルID（ユーザー名ではない）*/
+               "channelId":opt.channelId,
+               /*//再生リストID（複数指定可） */
+               //"id":"PL385A95130B11185F,UUvHgCaboF8WCwZzWG7ILDNA,FLK8sQmJBp8GCxrOtXWBpyEA",
+               "part":opt.part
+            };
+            if(opt.fields!="") requestOptions.fields=opt.fields;
+
+            makeRequest();
+
+            /* APIリクエスト */
+            function makeRequest(){
+               dbg("makeRequest:"+pageToken);
+               if(pageToken){
+                   requestOptions.pageToken=pageToken;
+               }
+               var request=gapi.client.request({
+                  "mine":false,
+                  "path":"/youtube/v3/playlists",
+                  "params":requestOptions
+               });
+                request.execute(function(resp) {
+                  dbg(resp);
+                  output(resp,pageToken);
+                });
+            }
+            /* HTML出力 */
+            function output(resp,pageTokenFLG){
+               dbg("★output");
+               pageToken=resp.nextPageToken;
+               if(pageTokenFLG==""){
+                  if(resp.pageInfo){
+                     var pageInfo=resp.pageInfo;
+                     resultsPerPage=resp.pageInfo.resultsPerPage; /*1レスポンスに含まれる結果数 */
+                     totalResults=resp.pageInfo.totalResults; /* 結果セット内の結果合計数 */
+                     total=Math.floor(totalResults/resultsPerPage);
+                     if(totalResults<=resultsPerPage){
+                        total=1;
+                     }else if(totalResults%resultsPerPage!=0){
+                        total++;
+                     }
+                     dbg("total:"+total+"/resultsPerPage:"+resultsPerPage+"/totalResults:"+totalResults);
+                     s+="<ul>";
+                        s+="<li>結果数最大値の指定:"+opt.maxResults+"</li>";
+                        s+="<li>結果セット内の結果合計数:"+pageInfo.totalResults+"</li>";
+                        s+="<li>1レスポンスに含まれる結果数:"+pageInfo.resultsPerPage+"</li>";
+                        s+="<li>取得数上限:"+((opt.limit==0)?"∞":"")+"</li>";
+                        s+="<li>リクエスト回数:"+total+"</li>";
+                     s+="</ul>";
+                     $("#results").append("<h2>Results</h2>"+s);
+                     s="";
+                  }
+               }
+               itemOutput(resp.items);
+               allcnt++;
+               if(allcnt<total){
+                  makeRequest();
+               }else{
+                  $("#results").append("<h2>Playlists</h2>"+s);
+               }
+            }
+            function itemOutput(items){
+               dbg("★itemOutput");
+               dbg(items);
+               //dbg("allcnt:"+allcnt+"/j:"+j);
+               $.each(items, function(i, item){
+                  if(opt.limit>0 && j>=opt.limit) return;
+                  j=(allcnt*resultsPerPage)+i+1;
+                  /* 動画IDが取得できない場合がある */
+                  if(item.id && item.snippet){
+                     s+="<dl>";
+                     var id=(item.id)?item.id:"no id";
+                     var thumbnails_default="no thumbnails";
+                     var snippet=item.snippet;
+                     var title=(snippet.title)?snippet.title:"no title";
+                     var channelId=(snippet.channelId)?snippet.channelId:"no channelId";
+                     var channelTitle=(snippet.channelTitle)?snippet.channelTitle:"no channelTitle";
+                     var pubdatedAt=(snippet.publishedAt)?formatDate(snippet.publishedAt):"no publishedAt";
+                     var description=(snippet.description)?snippet.description:"no description";
+                     if(snippet.thumbnails){
+                        thumbnails_default=snippet.thumbnails.medium.url;
+                        /* default, medium, height
+                        $.each(snippet.thumbnails, function(y, ytem){
+                           thumbnails:[default]: https://i.ytimg.com/vi/NH5aAfMKFzQ/default.jpg
+                           thumbnails:[medium]: https://i.ytimg.com/vi/NH5aAfMKFzQ/mqdefault.jpg
+                           thumbnails:[high]: https://i.ytimg.com/vi/NH5aAfMKFzQ/hqdefault.jpg
+                        });
+                        */
+                     }
+                     s+="<dt><a href='http://www.youtube.com/playlist?list="+id+"'><img src='"+thumbnails_default+"'></a></dt><dd>";
+                     s+="<b>【"+j+"】再生リストのタイトル（ID）: "+title+"（"+id+"）</b>";
+                     s+="<p>再生リストのアップロード日: "+pubdatedAt+"</p>";
+                     s+="<p>再生リストの説明文："+description+"</p>";
+                     if(item.status){
+                        var status=item.status;
+                        s+="<p>再生リストのステイタス:"+status.privacyStatus+"</p>";
+                     }
+                     s+="<p>再生リストが属するチャンネルのタイトル（ID): "+channelTitle+"（<a href='http://www.youtube.com/channel/"+channelId+"'>"+channelId+"</a>）</p>";
+                     s+="</dd></dl>";
+                  }
+               });
+            }
+             return this;
+         }
+      })(jQuery);
+      var formatDate=function(str){
+         var tmp=str.split("T");
+         var ymd=tmp[0].split("-");
+         var hms=tmp[1].split(":");
+         var sec=hms[2].split(".")[0];
+         var d=new Date(new Date(ymd[0], ymd[1]-1, ymd[2], hms[0], hms[1], sec).getTime()+(1000*60*60*9)); //+9h
+         var year=d.getFullYear();
+         var month=d.getMonth()+1;
+         var day=d.getDate();
+         var hour=(d.getHours()   < 10 ) ? '0'+d.getHours()   : d.getHours();
+         var min =(d.getMinutes() < 10 ) ? '0'+d.getMinutes() : d.getMinutes();
+         var sec =(d.getSeconds() < 10 ) ? '0'+d.getSeconds() : d.getSeconds();
+         return year+"/"+month+"/"+day+" "+hour+":"+min;//+":"+sec;
+      }
+      var dbg=function(str){
+         try{
+            if(window.console && console.log){
+               console.log(str);
+            }
+         }catch(err){
+            //alert("error:"+err);
+         }
+      }
+   </script>
+   <script src="https://apis.google.com/js/client.js?onload=onJSClientLoad"></script>
+<link rel="stylesheet" type="text/css" href="/common/css/example.css"></head>
+<body id='example3' class='example'><div class="ads" style="margin:32px auto;text-align:center;"></div><h1 class='h'><a href='/'>PHP &amp; JavaScript Room</a> :: 設置サンプル</h1>
+<h3 class='h'>実行結果</h3>
+   <h1>認証ユーザー自身のチャンネルの再生リスト情報取得（認証あり）</h1>
+   <div id="login-container" class="pre-auth">
+      <p>このサンプルを試すには、YouTubeアカウントへのアクセスが必要です。<br>許可する場合は<a href="#" id="login-link">こちらから認証</a>を行ってください。</p>
+   </div>
+   <div class="post-auth">
+      <div id="results"></div>
+   </div>
+ </body>
+</html>
