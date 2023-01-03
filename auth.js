@@ -7,6 +7,16 @@ var OAUTH2_SCOPES = [
   'https://www.googleapis.com/auth/youtube'
 ];
 
+function checkAuth() {
+	console.log("c");
+  gapi.auth.authorize({
+    client_id: OAUTH2_CLIENT_ID,
+    scope: OAUTH2_SCOPES,
+    //immediate: true
+	immediate: false
+  }, handleAuthResult);
+}
+
 // Upon loading, the Google APIs JS client automatically invokes this callback.
 googleApiClientReady = function() {
 	console.log("a");
@@ -21,15 +31,7 @@ googleApiClientReady = function() {
 // the client specified as the OAUTH2_CLIENT_ID, then the authorization
 // succeeds with no user intervention. Otherwise, it fails and the
 // user interface that prompts for authorization needs to display.
-function checkAuth() {
-	console.log("c");
-  gapi.auth.authorize({
-    client_id: OAUTH2_CLIENT_ID,
-    scope: OAUTH2_SCOPES,
-    //immediate: true
-	immediate: false
-  }, handleAuthResult);
-}
+
 
 // Handle the result of a gapi.auth.authorize() call.
 function handleAuthResult(authResult) {
