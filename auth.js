@@ -37,6 +37,8 @@ googleApiClientReady = function() {
 // Handle the result of a gapi.auth.authorize() call.
 function handleAuthResult(authResult) {
 	console.log("d");
+	console.log(authResult);
+	console.log(authResult.error);
   if (authResult && !authResult.error) {
 	  console.log("d0");
     // Authorization was successful. Hide authorization prompts and show
