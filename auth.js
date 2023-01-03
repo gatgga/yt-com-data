@@ -22,7 +22,8 @@ googleApiClientReady = function() {
 	console.log("a");
   gapi.auth.init(function() {
 	  console.log("b");
-    window.setTimeout(checkAuth, 1);
+		window.setTimeout(checkAuth, 1);
+		console.log("bb");
   });
 }
 
