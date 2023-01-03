@@ -38,6 +38,7 @@ googleApiClientReady = function() {
 function handleAuthResult(authResult) {
 	console.log("d");
   if (authResult && !authResult.error) {
+	  console.log("d0");
     // Authorization was successful. Hide authorization prompts and show
     // content that should be visible after authorization succeeds.
     $('.pre-auth').hide();
@@ -47,6 +48,7 @@ function handleAuthResult(authResult) {
     // Make the #login-link clickable. Attempt a non-immediate OAuth 2.0
     // client flow. The current function is called when that flow completes.
     $('#login-link').click(function() {
+		console.log("d1");
       gapi.auth.authorize({
         client_id: OAUTH2_CLIENT_ID,
         scope: OAUTH2_SCOPES,
